@@ -68,6 +68,8 @@ class app(Tk):
 			res, round_res = md5.md5(text)
 			self.round_res = round_res
 			self.set_output(res) # вывод результата в поле вывода хэша. принимает только str
+			with open("out.txt", "w") as f:
+				f.write(res)
 
 	class avalanche(LabelFrame):
 		def __init__(self, *args, **kwargs):
