@@ -1,5 +1,6 @@
+import md5
 from tkinter import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -35,6 +36,10 @@ class app(Tk):
 			self.txt_output = Entry(self, width = 100, justify = CENTER, state = "readonly")
 			self.txt_output.pack(side = TOP, expand = YES, fill = X)
 
+			# Прочие данные
+			self.byte_inp = None
+			self.round_res = None
+
 		def set_input(self, text):
 			# Изменить контент в поле ввода
 			self.txt_input.delete("0.0", END)
@@ -49,25 +54,28 @@ class app(Tk):
 
 		def btn_open_action(self):
 			# Открыть файл
-			path = filedialog.askopenfilename()
+			path = filedialog.askopenfilename(initialdir = ".")
 			#print(path)
 			if path:
 				with open(path, "rb") as f:
 					text = f.read()
-					self.set_input("{0:s}".format(str(text))) # вывод прочитанной бинарки в поле ввода
+				self.set_input(text.decode("latin1")) # вывод прочитанной бинарки в поле ввода
 
 		def btn_encode_action(self):
 			# Начать хэшить по черному
-			text = self.txt_input.get("0.0", END) # прочитать ввод в поле ввода
-			print(text)
-			# TODO: вызов хэш функции
-			self.set_output("Вывод") # вывод результата в поле вывода хэша. принимает только str
-			f = [[1,2,3,4,5,6,7,8],[5,6,1,3,8,9,3,5]]
-			self.master.master.frame_avalanche.set_plot(f) # если нужно както влиять на график снизу
+			text = self.txt_input.get("0.0", END)[:-1].encode("latin1") # прочитать ввод в поле ввода
+			self.byte_inp = text
+			res, round_res = md5.md5(text)
+			self.round_res = round_res
+			self.set_output(res) # вывод результата в поле вывода хэша. принимает только str
 
 	class avalanche(LabelFrame):
 		def __init__(self, *args, **kwargs):
 			super().__init__(*args, **kwargs)
+
+			# Прочие данные
+			self.byte_inp = None
+			self.round_res = None
 
 			# Блок ввода инфы о изменении
 			self.frame_change = Frame(self)
@@ -103,10 +111,30 @@ class app(Tk):
 			self.canv_plot._tkcanvas.pack(side = BOTTOM, expand = YES, fill = BOTH)
 
 		def btn_change_action(self):
-			text = self.master.master.frame_encoder.txt_output.get() # прочитать текущий зашифрованный хэш
+			self.master.master.frame_encoder.btn_encode_action()
+			text = self.master.master.frame_encoder.txt_input.get("0.0", END)[:-1].encode("latin1") # прочитать текущую строку на шифровку
 			num = self.txt_change.get() # прочитать указанное колво бит
-			print(text, num)
-			# TODO: видимо какаета работа
+			num = int(num) if num else -1 # миничеки
+			if not 0 <= num < len(text) * 8:
+				messagebox.showerror("Ошибка", "Некорректно указан изменяемый бит")
+				self.set_change("0")
+				return
+			i = num // 8
+			text = bytearray(text)
+			text[i] = md5.set_bit(text[i], 7 - num % 8)
+			text = bytes(text)
+			#print(text, num)
+			self.byte_inp = text
+			res, round_res = md5.md5(text)
+			self.round_res = round_res
+			self.set_output(res)
+			diff = md5.count_diff(self.master.master.frame_encoder.round_res, self.round_res)
+			self.set_plot(list(range(len(self.round_res))), diff) # если нужно както влиять на график снизу
+
+		def set_change(self, text):
+			# Изменить контент в поле ввода изменяемого бита
+			self.txt_change.delete(0, END)
+			self.txt_change.insert(0, text)
 
 		def set_output(self, text):
 			# Изменить контент в поле вывода
@@ -115,9 +143,9 @@ class app(Tk):
 			self.txt_output.insert(0, text)
 			self.txt_output.config(state = "readonly")
 
-		def set_plot(self, plot):
+		def set_plot(self, x, y):
 			self.fig.ax.clear()
-			self.fig.ax.plot(*plot)
+			self.fig.ax.plot(x, y)
 			self.canv_plot.draw()
 
 	def __init__(self, *args, **kwargs):
@@ -134,5 +162,4 @@ class app(Tk):
 		self.frame_avalanche = self.avalanche(self.frame_root, text = "Лавинный эффект")
 		self.frame_avalanche.pack(expand = YES, fill = BOTH, padx = 5, ipadx = 5)
 
-if __name__ == "__main__":
-	app().mainloop()
+if __name__ == "__main__": app().mainloop()
