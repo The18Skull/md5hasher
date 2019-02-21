@@ -39,6 +39,15 @@ def count_diff(A, B):
 		res.append(d)
 	return res
 
+def set_bit(num, i):
+	print("{0:b}".format(num))
+	mask = 1 << i
+	res = num & ~mask
+	if res == num:
+		res |= mask
+	print("{0:b}".format(res))
+	return res
+
 def md5(string):
 	M = bytearray(string) # в БАЙТАХ
 	L = (8 * len(string)) & 0xFFFFFFFFFFFFFFFF # 64 bit
@@ -93,6 +102,7 @@ if __name__ == "__main__":
 	#	md5(message)
 	res1, round_res1 = md5(b"md5")
 	res2, round_res2 = md5(b"md4")
+	print(res1); print(res2)
 	#for x in round_res1: print(" ".join([ "{0:032b}".format(v) for v in x.values() ]))
 	#print()
 	#for x in round_res2: print(" ".join([ "{0:032b}".format(v) for v in x.values() ]))
